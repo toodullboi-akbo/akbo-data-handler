@@ -45,47 +45,26 @@ object dustmq{
   def doKboBatterData(kboDSDir : String): Unit = {
     val batterDSDir : String = Paths.get(kboDSDir, GlobalConfig.BATTER_DS_DIR_NAME).toString
     val batterDailyDir : String = Paths.get(batterDSDir, GlobalConfig.BATTER_DAILY_DS_DIR_NAME).toString
-
+    val batterSitDir : String = Paths.get(batterDSDir, GlobalConfig.BATTER_SITUATION_DS_DIR_NAME).toString
 
     sparkManager.withSparkSession{
       (spark) =>{
-
         val kboBatterYearlyDF = spark.read
           .parquet(batterDSDir)
 
-        //      kboDF.show(5)
         kboBatterYearlyDF.show(truncate = true)
-        //      spark.sql("CREATE DATABASE learn_spark_db")
-//        val kboBatterDailySchema = StructType(Array(
-//          StructField("id", IntegerType),
-//          StructField("date", DateType),
-//          StructField("opp", StringType),
-//          StructField("PA", IntegerType),
-//          StructField("AB", IntegerType),
-//          StructField("R", IntegerType),
-//          StructField("H", IntegerType),
-//          StructField("2B", IntegerType),
-//          StructField("3B", IntegerType),
-//          StructField("HR", IntegerType),
-//          StructField("RBI", IntegerType),
-//          StructField("SB", IntegerType),
-//          StructField("CS", IntegerType),
-//          StructField("BB", IntegerType),
-//          StructField("HBP", IntegerType),
-//          StructField("SO", IntegerType),
-//          StructField("GDP", IntegerType),
-//          StructField("seasonAVG", FloatType),
-//
-//        ))
         val kboBatterDailyDF = spark.read
           .option("dateFormat","yyyy-MM-dd")
           .parquet(batterDailyDir)
+
+        val kboBatterSitDF = spark.read
+          .parquet(batterSitDir)
 
         /////////////////////////////////
         // daily
         /////////////////////////////////
         // gameAVG - merge
-        val revisedKboBatterDailyDF = kboBatterDailyDF
+        val finalKboBatterDailyDF = kboBatterDailyDF
           .withColumn("gameAVG", round(col("H")/col("AB"),3))
 
         /////////////////////////////////
@@ -123,8 +102,8 @@ object dustmq{
           .join(dailyGameDF,"id", "left")
           .join(seasonAVGDF,"id", "left")
 
-        // TB, SLG, OBP
-        revisedKboBatterYearlyDF
+        // TB, SLG, OBP, OPS, XBH, ISOP, GPA, GO/AO, BB/K
+        val finalKboBatterYearlyDF = revisedKboBatterYearlyDF
           .withColumn("TB", col("H") + col("2B") + (col("3B") * 2) + (col("HR") * 3))
           .withColumn("SLG", round(col("TB") / col("AB"),3))
           .withColumn("OBP", round((col("H")+col("BB")+col("HBP"))/(col("AB")+col("BB")+col("HBP")+col("SF")),3))
@@ -134,7 +113,18 @@ object dustmq{
           .withColumn("GPA", round((col("OBP")*1.8+col("SLG"))/4,3))
           .withColumn("GO/AO", round(col("GO")/col("AO"),2))
           .withColumn("BB/K",round(col("BB")/col("SO"),2))
-          .show
+
+        /////////////////////////////////
+        // situation
+        /////////////////////////////////
+        val finalKboBatterSitDF = kboBatterSitDF
+
+        /////////////////////////////////
+        // final
+        /////////////////////////////////
+        finalKboBatterYearlyDF.show
+        finalKboBatterDailyDF.show
+        finalKboBatterSitDF.show
       }
 
     }
@@ -144,11 +134,8 @@ object dustmq{
   def main(args:Array[String]) : Unit = {
     try {
       val kboDSDir : String = args(0)
-
-//      val filesinDir = fileManager.getFilesinDir(kboDSDir)
-//      filesinDir.foreach(item => println(item))
-
       doKboBatterData(kboDSDir)
+
     } catch {
       case ex : MyLittleException => println(ex.getMessage)
     } finally {

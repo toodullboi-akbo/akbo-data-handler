@@ -9,7 +9,6 @@ object sparkManager {
     .builder
     .appName("KBOspark")
     .config("spark.master","local")
-    .enableHiveSupport()
     .getOrCreate()
 
   def withSparkSession[T](f: SparkSession => T): T = {
