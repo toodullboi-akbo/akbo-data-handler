@@ -42,7 +42,7 @@ object dustmq{
   }
 
 
-  def doKboBatterData(kboDSDir : String): Unit = {
+  def getKboBatterData(kboDSDir : String): Unit = {
     val batterDSDir : String = Paths.get(kboDSDir, GlobalConfig.BATTER_DS_DIR_NAME).toString
     val batterDailyDir : String = Paths.get(batterDSDir, GlobalConfig.BATTER_DAILY_DS_DIR_NAME).toString
     val batterSitDir : String = Paths.get(batterDSDir, GlobalConfig.BATTER_SITUATION_DS_DIR_NAME).toString
@@ -52,7 +52,6 @@ object dustmq{
         val kboBatterYearlyDF = spark.read
           .parquet(batterDSDir)
 
-        kboBatterYearlyDF.show(truncate = true)
         val kboBatterDailyDF = spark.read
           .option("dateFormat","yyyy-MM-dd")
           .parquet(batterDailyDir)
@@ -61,16 +60,9 @@ object dustmq{
           .parquet(batterSitDir)
 
         /////////////////////////////////
-        // daily
-        /////////////////////////////////
-        // gameAVG - merge
-        val finalKboBatterDailyDF = kboBatterDailyDF
-          .withColumn("gameAVG", round(col("H")/col("AB"),3))
-
-        /////////////////////////////////
         // yearly
         /////////////////////////////////
-        // AVG
+        // AVG // of daily game
         val windowSpec = Window.partitionBy("id").orderBy(desc("date"))
         val seasonAVGDF = kboBatterDailyDF
           .withColumn("rowNo",row_number.over(windowSpec))
@@ -115,6 +107,13 @@ object dustmq{
           .withColumn("BB/K",round(col("BB")/col("SO"),2))
 
         /////////////////////////////////
+        // daily
+        /////////////////////////////////
+        // gameAVG - merge
+        val finalKboBatterDailyDF = kboBatterDailyDF
+          .withColumn("gameAVG", round(col("H")/col("AB"),3))
+
+        /////////////////////////////////
         // situation
         /////////////////////////////////
         val finalKboBatterSitDF = kboBatterSitDF
@@ -126,16 +125,68 @@ object dustmq{
         finalKboBatterDailyDF.show
         finalKboBatterSitDF.show
       }
-
     }
 
+  }
+
+  def getKboPitcherData(kboDSDir : String): Unit = {
+    val pitcherDSDir : String = Paths.get(kboDSDir, GlobalConfig.PITCHER_DS_DIR_NAME).toString
+    val pitcherDailyDir : String = Paths.get(pitcherDSDir, GlobalConfig.PITCHER_DAILY_DS_DIR_NAME).toString
+    val pitcherSitDir : String = Paths.get(pitcherDSDir, GlobalConfig.PITCHER_SITUATION_DS_DIR_NAME).toString
+
+    sparkManager.withSparkSession {
+      (spark) => {
+        val kboPitcherYearlyDF = spark.read
+          .parquet(pitcherDSDir)
+
+        val kboPitcherDailyDF = spark.read
+          .option("dateFormat","yyyy-MM-dd")
+          .parquet(pitcherDailyDir)
+          .withColumn("tempFloatIP", round(col("IP"),3))
+          .drop("IP")
+          .withColumnRenamed("tempFloatIP","IP")
+
+        val kboPitcherSitDF = spark.read
+          .parquet(pitcherSitDir)
+
+        /////////////////////////////////
+        // yearly
+        /////////////////////////////////
+        kboPitcherDailyDF.show
+        kboPitcherYearlyDF.show
+        // ERA
+        val windowSpec = Window.partitionBy("id").orderBy(desc("date"))
+        val seasonERADF = kboPitcherDailyDF
+          .withColumn("rowNo",row_number.over(windowSpec))
+          .where(col("rowNo") === 1)
+          .select(col("id"),col("seasonERA").alias("ERA"))
+        // G
+        val dailyGameDF = kboPitcherDailyDF
+          .groupBy("id")
+          .agg(
+            count("date").alias("G"),
+            count("date").when(col("res"),"승").alias("W"),
+            count("date").when(col("res"),"패").alias("L")
+          )
+
+
+        // yearly - join
+        val revisedKboPitcherYearlyDF = kboPitcherYearlyDF
+          .join(seasonERADF,"id", "left")
+          .join(dailyGameDF,"id", "left")
+
+        revisedKboPitcherYearlyDF.show
+
+
+      }
+    }
   }
 
   def main(args:Array[String]) : Unit = {
     try {
       val kboDSDir : String = args(0)
-      doKboBatterData(kboDSDir)
-
+//      getKboBatterData(kboDSDir)
+      getKboPitcherData(kboDSDir)
     } catch {
       case ex : MyLittleException => println(ex.getMessage)
     } finally {
