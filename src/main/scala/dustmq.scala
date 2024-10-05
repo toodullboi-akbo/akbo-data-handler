@@ -126,7 +126,6 @@ object dustmq{
         finalKboBatterSitDF.show
       }
     }
-
   }
 
   def getKboPitcherData(kboDSDir : String): Unit = {
@@ -158,7 +157,7 @@ object dustmq{
           .withColumn("rowNo",row_number.over(windowSpec))
           .where(col("rowNo") === 1)
           .select(col("id"),col("seasonERA").alias("ERA"))
-        // G
+        // G, tempIP, H, HR, BB, HBP, SO, R, ER
         val dailyGameDF = kboPitcherDailyDF
           .groupBy("id")
           .agg(
@@ -196,6 +195,7 @@ object dustmq{
           .agg(
             count("date").alias("SV")
           )
+
         // HOLD
         val dailyHoldDF = kboPitcherDailyDF
           .where(col("res") === "홀")
@@ -216,7 +216,7 @@ object dustmq{
           .na.fill(0)
 
 
-
+        // WPCT, IP, WHIP, AVG, BABIP, P/G, P/IP, K/9, BB/9, K/BB, OBP, SLG, OPS
         val finalKboPitcherYearlyDF = revisedKboPitcherYearlyDF
           .withColumn("WPCT", round(col("W")/(col("W")+col("L")),3))
           .withColumn("IP",
@@ -263,15 +263,55 @@ object dustmq{
     }
   }
 
+  def getKboFielderData(kboDSDir : String): Unit = {
+    val fielderDSDir : String = Paths.get(kboDSDir, GlobalConfig.FIELDER_DS_DIR_NAME).toString
+
+    sparkManager.withSparkSession {
+      (spark) => {
+        val kboFielderYearlyDF = spark.read
+          .parquet(fielderDSDir)
+          .withColumn("tempIP", round(col("IP"), 3))
+          .drop("IP")
+          .withColumnRenamed("tempIP", "IP")
+
+        val finalKboFielderYearlyDF = kboFielderYearlyDF
+          .withColumn("FPCT", round((col("PO")+col("A"))/(col("PO")+col("A")+col("E")), 3))
+          .withColumn("CS_per", round(col("CS")/(col("SB")+col("CS"))*100,1))
+
+        finalKboFielderYearlyDF.show
+      }
+    }
+  }
+
+  def getKboRunnerData(kboDSDir : String): Unit = {
+    val runnerDSDir : String = Paths.get(kboDSDir, GlobalConfig.RUNNER_DS_DIR_NAME).toString
+
+    sparkManager.withSparkSession {
+      (spark) => {
+        val kboRunnerYearlyDF = spark.read
+          .parquet(runnerDSDir)
+
+        kboRunnerYearlyDF
+          .withColumn("SBA", col("SB")+col("CS"))
+          .withColumn("SB_per", round(col("SB")/col("SBA")*100,1))
+          .show
+      }
+    }
+
+  }
+
+
   def main(args:Array[String]) : Unit = {
     try {
       val kboDSDir : String = args(0)
 //      getKboBatterData(kboDSDir)
-      getKboPitcherData(kboDSDir)
+//      getKboPitcherData(kboDSDir)
+//      getKboFielderData(kboDSDir)
+      getKboRunnerData(kboDSDir)
     } catch {
       case ex : MyLittleException => println(ex.getMessage)
     } finally {
-      sparkManager.stopSpark()
+      sparkManager.stopSpark
     }
   }
 }

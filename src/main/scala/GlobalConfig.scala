@@ -6,4 +6,8 @@ object GlobalConfig {
   val PITCHER_DS_DIR_NAME : String = "pitcher_datasets"
   val PITCHER_DAILY_DS_DIR_NAME : String = "pitcher_daily"
   val PITCHER_SITUATION_DS_DIR_NAME : String = "pitcher_situation"
+
+  val FIELDER_DS_DIR_NAME : String = "fielding_datasets"
+
+  val RUNNER_DS_DIR_NAME : String = "runner_datasets"
 }
