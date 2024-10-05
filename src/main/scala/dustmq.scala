@@ -152,8 +152,6 @@ object dustmq{
         /////////////////////////////////
         // yearly
         /////////////////////////////////
-        kboPitcherDailyDF.show
-        kboPitcherYearlyDF.show
         // ERA
         val windowSpec = Window.partitionBy("id").orderBy(desc("date"))
         val seasonERADF = kboPitcherDailyDF
@@ -165,8 +163,45 @@ object dustmq{
           .groupBy("id")
           .agg(
             count("date").alias("G"),
-            count("date").when(col("res"),"승").alias("W"),
-            count("date").when(col("res"),"패").alias("L")
+            sum("IP").alias("tempIP"),
+            sum("H").alias("H"),
+            sum("HR").alias("HR"),
+            sum("BB").alias("BB"),
+            sum("HBP").alias("HBP"),
+            sum("SO").alias("SO"),
+            sum("R").alias("R"),
+            sum("ER").alias("ER"),
+          )
+
+        // W
+        val dailyWinDF = kboPitcherDailyDF
+          .where(col("res") === "승")
+          .groupBy("id")
+          .agg(
+            count("date").alias("W")
+          )
+
+        // L
+        val dailyLoseDF = kboPitcherDailyDF
+          .where(col("res") === "패")
+          .groupBy("id")
+          .agg(
+            count("date").alias("L")
+          )
+
+        // SV
+        val dailySaveDF = kboPitcherDailyDF
+          .where(col("res") === "세")
+          .groupBy("id")
+          .agg(
+            count("date").alias("SV")
+          )
+        // HOLD
+        val dailyHoldDF = kboPitcherDailyDF
+          .where(col("res") === "홀")
+          .groupBy("id")
+          .agg(
+            count("date").alias("HLD")
           )
 
 
@@ -174,10 +209,56 @@ object dustmq{
         val revisedKboPitcherYearlyDF = kboPitcherYearlyDF
           .join(seasonERADF,"id", "left")
           .join(dailyGameDF,"id", "left")
+          .join(dailyWinDF, "id", "left")
+          .join(dailyLoseDF, "id", "left")
+          .join(dailySaveDF, "id", "left")
+          .join(dailyHoldDF, "id", "left")
+          .na.fill(0)
 
-        revisedKboPitcherYearlyDF.show
 
 
+        val finalKboPitcherYearlyDF = revisedKboPitcherYearlyDF
+          .withColumn("WPCT", round(col("W")/(col("W")+col("L")),3))
+          .withColumn("IP",
+            when((col("tempIP") % 1) >= 0.9, floor(col("tempIP"))+1)
+              .otherwise(
+                floor(col("tempIP")) +
+                  when((col("tempIP") % 1) < 0.3, 0)
+                    .when((col("tempIP") % 1) < 0.6, 0.333)
+                    .otherwise(0.667)
+              )
+            )
+          .drop("tempIP")
+          .withColumn("WHIP",round((col("H")+col("BB"))/col("IP"),2))
+          .withColumn("AVG", round(col("H")/(col("TBF")-col("BB")-col("HBP")-col("SF")-col("SAC")),3))
+          .withColumn("BABIP", round((col("H")-col("HR"))/(col("TBF")-col("BB")-col("HBP")-col("SAC")-col("SO")-col("HR")),3))
+          .withColumn("P/G", round(col("NP")/col("G"),1))
+          .withColumn("P/IP", round(col("NP")/col("IP"),1))
+          .withColumn("K/9", round(col("SO")/col("IP")*9,2))
+          .withColumn("BB/9", round(col("BB")/col("IP")*9,2))
+          .withColumn("K/BB",round(col("SO")/col("BB"),2))
+          .withColumn("OBP",round((col("H")+col("BB")+col("HBP"))/(col("TBF")-col("SAC")),3))
+          .withColumn("SLG",round((col("H") + col("2B") + (col("3B") * 2) + (col("HR") * 3))/(col("TBF")-col("BB")-col("HBP")-col("SF")-col("SAC")),3))
+          .withColumn("OPS",round(col("OBP")+col("SLG"),3))
+          .na.fill(0)
+
+        /////////////////////////////////
+        // daily
+        /////////////////////////////////
+        val finalKboPitcherDailyDF = kboPitcherDailyDF
+
+        /////////////////////////////////
+        // situation
+        /////////////////////////////////
+        val finalKboPitcherSitDF = kboPitcherSitDF
+
+
+        /////////////////////////////////
+        // final
+        /////////////////////////////////
+        finalKboPitcherYearlyDF.show
+        finalKboPitcherDailyDF.show
+        finalKboPitcherSitDF.show
       }
     }
   }
