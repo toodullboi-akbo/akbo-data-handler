@@ -10,6 +10,8 @@ import scala.jdk.CollectionConverters._
 import sparkManager.sparkManager
 import exception.MyLittleException
 import fileIO.fileManager
+import secret.secretEnv
+//import azureBlobStorage.azureBlobStorageConnector
 
 object dustmq{
   def blogsDF(spark : SparkSession, file : String ): Unit = {
@@ -43,9 +45,13 @@ object dustmq{
 
 
   def getKboBatterData(kboDSDir : String): Unit = {
-    val batterDSDir : String = Paths.get(kboDSDir, GlobalConfig.BATTER_DS_DIR_NAME).toString
-    val batterDailyDir : String = Paths.get(batterDSDir, GlobalConfig.BATTER_DAILY_DS_DIR_NAME).toString
-    val batterSitDir : String = Paths.get(batterDSDir, GlobalConfig.BATTER_SITUATION_DS_DIR_NAME).toString
+    val batterDSDir: String = kboDSDir + GlobalConfig.BATTER_DS_DIR_NAME
+    val batterDailyDir : String = kboDSDir + GlobalConfig.BATTER_DS_DIR_NAME + "/" + GlobalConfig.BATTER_DAILY_DS_DIR_NAME
+    val batterSitDir : String = kboDSDir + GlobalConfig.BATTER_DS_DIR_NAME +"/" + GlobalConfig.BATTER_SITUATION_DS_DIR_NAME
+
+//    val batterDSDir : String = Paths.get(kboDSDir, GlobalConfig.BATTER_DS_DIR_NAME).toString
+//    val batterDailyDir : String = Paths.get(batterDSDir, GlobalConfig.BATTER_DAILY_DS_DIR_NAME).toString
+//    val batterSitDir : String = Paths.get(batterDSDir, GlobalConfig.BATTER_SITUATION_DS_DIR_NAME).toString
 
     sparkManager.withSparkSession{
       (spark) =>{
@@ -303,11 +309,14 @@ object dustmq{
 
   def main(args:Array[String]) : Unit = {
     try {
-      val kboDSDir : String = args(0)
-//      getKboBatterData(kboDSDir)
+      val kboDSDir : String = "wasbs://"+secretEnv.AZURE_BLOB_OUTPUT_CONTAINER_NAME+"@"+secretEnv.AZURE_BLOB_STORAGE_ACCOUNT+".blob.core.windows.net/kbo-datasets/"
+//        val kboDSDir : String = s"abfss://${secretEnv.AZURE_BLOB_OUTPUT_CONTAINER_NAME}@${secretEnv.AZURE_BLOB_STORAGE_ACCOUNT}.dfs.core.windows.net/kbo-datasets/"
+//      azureBlobStorageConnector.printListOfBlob()
+//      val kboDSDir : String = args(0)
+        getKboBatterData(kboDSDir)
 //      getKboPitcherData(kboDSDir)
 //      getKboFielderData(kboDSDir)
-      getKboRunnerData(kboDSDir)
+//      getKboRunnerData(kboDSDir)
     } catch {
       case ex : MyLittleException => println(ex.getMessage)
     } finally {
