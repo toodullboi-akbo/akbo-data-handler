@@ -1,10 +1,10 @@
-ThisBuild / version := "0.1.1-SNAPSHOT"
+ThisBuild / version := "0.1.0-SNAPSHOT"
 
-ThisBuild / scalaVersion := "2.13.10"
+ThisBuild / scalaVersion := "2.12.20"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "scala-dustmq"
+    name := "kbo-data-handler"
   )
 
 libraryDependencies ++= Seq(

@@ -6,12 +6,12 @@ import org.apache.spark.sql.expressions.Window
 import java.nio.file.{Files, Path, Paths}
 import java.nio.file.attribute.BasicFileAttributes
 import scala.jdk.CollectionConverters._
+import java.net.URLClassLoader
 
 import sparkManager.sparkManager
 import exception.MyLittleException
 import fileIO.fileManager
 import secret.secretEnv
-//import azureBlobStorage.azureBlobStorageConnector
 
 object dustmq{
   def blogsDF(spark : SparkSession, file : String ): Unit = {
@@ -309,6 +309,17 @@ object dustmq{
 
   def main(args:Array[String]) : Unit = {
     try {
+      val classLoader = this.getClass.getClassLoader
+
+      classLoader match {
+        case urlClassLoader: URLClassLoader =>
+          val urls = urlClassLoader.getURLs
+          println("Dependencies loaded at runtime:")
+          urls.foreach(url => println(url.getPath))
+        case _ =>
+          println("ClassLoader is not a URLClassLoader, dependencies cannot be listed.")
+      }
+
       val kboDSDir : String = "wasbs://"+secretEnv.AZURE_BLOB_OUTPUT_CONTAINER_NAME+"@"+secretEnv.AZURE_BLOB_STORAGE_ACCOUNT+".blob.core.windows.net/kbo-datasets/"
 //        val kboDSDir : String = s"abfss://${secretEnv.AZURE_BLOB_OUTPUT_CONTAINER_NAME}@${secretEnv.AZURE_BLOB_STORAGE_ACCOUNT}.dfs.core.windows.net/kbo-datasets/"
 //      azureBlobStorageConnector.printListOfBlob()
