@@ -24,4 +24,6 @@ libraryDependencies ++= Seq(
   "org.apache.hadoop" % "hadoop-client" % "3.3.6",
   "org.apache.hadoop" % "hadoop-client-api" % "3.3.6",
   "org.apache.hadoop" % "hadoop-client-runtime" % "3.3.6",
+
+  "com.azure.cosmos.spark" % "azure-cosmos-spark_3-5_2-12" % "4.36.0"
 )

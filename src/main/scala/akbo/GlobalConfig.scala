@@ -1,3 +1,5 @@
+package akbo
+
 object GlobalConfig {
   val BATTER_DS_DIR_NAME : String = "batter_datasets"
   val BATTER_DAILY_DS_DIR_NAME : String = "batter_daily"
@@ -10,4 +12,11 @@ object GlobalConfig {
   val FIELDER_DS_DIR_NAME : String = "fielding_datasets"
 
   val RUNNER_DS_DIR_NAME : String = "runner_datasets"
+
+  val TEAM_DS_DIR_NAME : String = "team_datasets"
+
+  val LEGACY_DS_DIR_NAME : String = "legacy"
+  val YEARLY_DS_DIR_NAME : String = "yearly"
+
+  val CURRENT_YEAR : Int = 2024
 }
