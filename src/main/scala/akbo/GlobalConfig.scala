@@ -18,5 +18,7 @@ object GlobalConfig {
   val LEGACY_DS_DIR_NAME : String = "legacy"
   val YEARLY_DS_DIR_NAME : String = "yearly"
 
-  val CURRENT_YEAR : Int = 2024
+  val VERSUS_DS_DIR_NAME : String = "versus"
+
+  val CURRENT_YEAR : Int = 2025
 }

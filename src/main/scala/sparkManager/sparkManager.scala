@@ -12,7 +12,8 @@ object sparkManager {
 
   lazy val spark = SparkSession.builder()
     .appName("KBOspark")
-    .master("local")
+    .master("k8s://spark-operator-webhook-svc.airflow.svc:9443")
+    .config("spark.kubernetes.namespace", "airflow")
     // blob storage
     .config(s"fs.azure.account.key.${secretEnv.AZURE_BLOB_STORAGE_ACCOUNT}.blob.core.windows.net", secretEnv.AZURE_BLOB_STORAGE_ACCOUNT_KEY)
     .config(s"spark.hadoop.fs.azure.account.key.${secretEnv.AZURE_BLOB_STORAGE_ACCOUNT}.blob.core.windows.net", secretEnv.AZURE_BLOB_STORAGE_ACCOUNT_KEY)
